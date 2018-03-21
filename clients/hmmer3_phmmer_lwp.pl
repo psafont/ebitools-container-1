@@ -2,11 +2,11 @@
 
 =head1 NAME
 
-hmmer3_hmmscan_lwp.pl
+hmmer3_phmmer_lwp.pl
 
 =head1 DESCRIPTION
 
-HMMER3 HMMSCAN (REST) web service Perl client using L<LWP>.
+HMMER3 PHMMER (REST) web service Perl client using L<LWP>.
 
 Tested with:
 
@@ -56,7 +56,7 @@ limitations under the License.
 
 =head1 VERSION
 
-$Id: hmmer3_hmmscan_lwp.pl 2791 2014-05-29 15:31:39Z hpm $
+$Id: hmmer3_phmmer_lwp.pl 2791 2014-05-29 15:31:39Z hpm $
 
 =cut
 
@@ -74,13 +74,7 @@ use File::Basename;
 use Data::Dumper;
 
 # Base URL for service
-#my $baseUrl = 'http://www.ebi.ac.uk/Tools/services/rest/hmmer_hmmscan';
-#my $baseUrl = 'http://wwwdev.ebi.ac.uk/Tools/services/rest/hmmer3_hmmscan';
-#my $baseUrl = 'http://ashdev-2.ebi.ac.uk:9889/Tools/services/rest/hmmer3_hmmscan/';
-#my $baseUrl = 'http://ves-hx-21.ebi.ac.uk:8080/Tools/services/rest/hmmer3_hmmscan';
-#my $baseUrl = 'http://wp-p1m-20.ebi.ac.uk:8080/Tools/services/rest/hmmer3_hmmscan';
-my $baseUrl = 'https://www.ebi.ac.uk/Tools/services/rest/hmmer3_hmmscan';
-
+my $baseUrl = 'http://www.ebi.ac.uk/Tools/services/rest/hmmer3_phmmer';
 
 # Set interval for checking status
 my $checkInterval = 10;
@@ -97,23 +91,22 @@ my %tool_params = ();
 GetOptions(
 
 	# Tool specific options
-	'sequence=s'   => \$params{'sequence'},
-	'hmmDatabase=s'   => \$tool_params{'hmmDatabase'}, # database to search, Pfam Tigrfam gene3d pirsf superfamily are available
+	'sequence=s'   => \$params{'sequence'}, # string  Frequently used, Reference Proteomes:uniprotrefprot, UniProtKB:uniprotkb, SwissProt:swissprot, PDB:pdb
+	'seqdb=s'   => \$tool_params{'seqdb'}, # string  Frequently used, Reference Proteomes:uniprotrefprot, UniProtKB:uniprotkb, SwissProt:swissprot, PDB:pdb
 	'alignView'   => \$tool_params{'alignView'},  # Output alignment in result
-
-	'incE' => \$params{'incE'},   			  # Siginificance E-values[Model] (ex:0.01)
-	'E' => \$tool_params{'E'}, 		              # Report E-values[Model] (ex:1)
+	'incE' => \$params{'incE'},   			     # Siginificance E-values[Model] (ex:0.01)
+	'E' => \$tool_params{'E'}, 		               # Report E-values[Model] (ex:1)
+	'evalue' => \$tool_params{'evalue'}, 		               # Report E-values[Model] (ex:1)
 	'domE' => \$tool_params{'domE'},              # Report E-values[Hit] (ex:1)
 	'incdomE' => \$params{'incdomE'},             # Siginificance E-values[Hit] (ex:0.03)
-
 	'incdomT' => \$params{'incdomT'},             # Significance bit scores[Hit] (ex:22))
 	'T' => \$params{'T'},                         # Report bit scores[Sequence] (ex:7)
 	'domT' => \$tool_params{'domT'},              # Report bit scores[Hit] (ex:5)
 	'incT' => \$params{'incT'},                   # Significance bit scores[Sequence] (ex:25)
-
-	'cut_ga' => \$params{'cut_ga'},               # GA thresholds
-	'nobias' => \$params{'nobias'},               # Bias composition filter
-
+	'popen' => \$params{'popen'},                 # Gap Penalties for Open
+	'pextend' => \$params{'pextend'},             # Gap Penalties for Extended
+	'mx' => \$params{'mx'},                       # Substitution scoring matrix [BLOSUM45, BLOSUM62, BLOSUM90, PAM30, PAM70]
+	'nobias' => \$params{'nobias'},               # True for turnning off, bias composition filter
 
 
 	# Generic options
@@ -377,10 +370,8 @@ sub rest_run {
 	if ( defined($title) ) {
 		print_debug_message( 'rest_run', 'title: ' . $title, 1 );
 	}
-	print_debug_message( 'rest_run', 'params>>: ' . Dumper($params), 1 );
+	print_debug_message( 'rest_run', 'params: ' . Dumper($params), 1 );
 
-
-	
 	# Get an LWP UserAgent.
 	$ua = &rest_user_agent() unless defined($ua);
 
@@ -740,13 +731,7 @@ sub load_params {
 	#	$tool_params{'tree'} = $params{'outputtree'};
 	# }
 
-	#print_debug_message( 'load_params', 'hmmDatabase:'.$params{'hmmDatabase'}, 1 );
-
 	print_debug_message( 'load_params', 'End', 1 );
-
-	
-
-	
 }
 
 =head2 client_poll()
@@ -938,10 +923,10 @@ Print program usage message.
 sub usage {
 	print STDERR <<EOF
 
-HMMER3 HMMSCAN
+HMMER3 PHMMER
 ===================
 
-HMMER hmmscan is used to search sequences against collections of profiles.
+HMMER phmmer is used to search sequences against collections of profiles.
 
 [Required]
 
@@ -950,10 +935,10 @@ HMMER hmmscan is used to search sequences against collections of profiles.
 
 [Optional]
 
-  --database         : str  : database to search,
-                              Pfam Tigrfam gene3d pirsf superfamily are available
-  --hmmDatabase      : str  : database to search,
-                              Pfam Tigrfam gene3d pirsf superfamily are available
+  --database         : str  : string Frequently used
+                              [Reference Proteomes:uniprotrefprot,
+                              UniProtKB:uniprotkb, SwissProt: swissprot, PDB:pdb]
+  --seqdb			 : str  : string Frequently used
   --alignView        :      : Output alignment in result
   --incE             :      : Siginificance E-values[Model] (ex:0.01)
   --incdomE          :      : Siginificance E-values[Hit] (ex:0.03)
@@ -963,8 +948,11 @@ HMMER hmmscan is used to search sequences against collections of profiles.
   --incdomT          :      : Significance bit scores[Hit] (ex:22)
   --T                :      : Report bit scores[Sequence] (ex:7)
   --domT             :      : Report bit scores[Hit] (ex:5)
-  --cut_ga           :      : GA thresholds
-  --nobias           :      : Bias composition filter
+  --popen            :      : Gap Penalties for Open
+  --pextend          :      : Gap Penalties for Extend
+  --mx               :      : Substitution scoring matrix
+                              [BLOSUM45, BLOSUM62, BLOSUM90, PAM30, PAM70]
+  --nobias           :      : True for turnning off, bias composition filter
 
 [General]
 
