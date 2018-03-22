@@ -13,3 +13,32 @@
 4. Go back to master branch: `git checkout master`
 5. Insert the modified branch into master: `git subtree add --squash -P clients perl_clients`
 6. Clean up the branch: `git branch -D perl_clients`
+
+## Quick quide for the new tools, Hmmer phmmer & hmmscan
+** How to use the clients **
+
+How to use hmmer3 hmmscan:
+> directly use the client(without Docker):
+```
+./clients/hmmer3_hmmscan_lwp.pl --email yours@email.ac.uk --hmmDatabase Pfam ./sequence/single.seq
+```
+
+> With Docker):
+```
+docker run image_name hmmer3_hmmscan_lwp.pl --email yours@email.ac.uk --hmmDatabase Pfam ./sequence/single.seq
+```
+
+
+How to use hmmer3 phmmer:
+> directly use the client(without Docker):
+```
+./clients/hmmer3_phmmer_lwp.pl --email yours@email.ac.uk --seqdb uniprotkb ./sequence/single.seq
+```
+
+> With Docker):
+```
+docker run image_name ./clients/hmmer3_phmmer_lwp.pl --email yours@email.ac.uk --seqdb uniprotkb ./sequence/single.seq
+```
+
+Retired:
+>  ~~ hmmer_hmmscan ~~ 
