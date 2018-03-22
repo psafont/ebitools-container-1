@@ -15,30 +15,29 @@
 6. Clean up the branch: `git branch -D perl_clients`
 
 ## Quick quide for the new tools, Hmmer phmmer & hmmscan
-** How to use the clients **
+**How to use the clients**
 
 How to use hmmer3 hmmscan:
-> directly use the client(without Docker):
+> To use the client directly (without Docker) :
 ```
 ./clients/hmmer3_hmmscan_lwp.pl --email yours@email.ac.uk --hmmDatabase Pfam ./sequence/single.seq
 ```
 
-> With Docker):
+> With Docker :
 ```
 docker run image_name hmmer3_hmmscan_lwp.pl --email yours@email.ac.uk --hmmDatabase Pfam ./sequence/single.seq
 ```
 
-
-How to use hmmer3 phmmer:
-> directly use the client(without Docker):
+How to use hmmer3 phmmer :
+> To use the client directly (without Docker):
 ```
 ./clients/hmmer3_phmmer_lwp.pl --email yours@email.ac.uk --seqdb uniprotkb ./sequence/single.seq
 ```
 
-> With Docker):
+> With Docker :
 ```
 docker run image_name ./clients/hmmer3_phmmer_lwp.pl --email yours@email.ac.uk --seqdb uniprotkb ./sequence/single.seq
 ```
 
-Retired:
->  ~~ hmmer_hmmscan ~~ 
+The recent retired tool :
+> ~~hmmer_hmmscan~~ 
