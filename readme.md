@@ -14,7 +14,7 @@
 5. Insert the modified branch into master: `git subtree add --squash -P clients perl_clients`
 6. Clean up the branch: `git branch -D perl_clients`
 
-## Quick quide for the new tools, Hmmer phmmer & hmmscan
+## Quick guide for the new tools, Hmmer3 phmmer & hmmscan
 **How to use the clients**
 
 How to use hmmer3 hmmscan :
