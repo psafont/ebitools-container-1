@@ -28,7 +28,6 @@ How to use hmmer3 hmmscan :
 docker run image_name hmmer3_hmmscan_lwp.pl --email yours@email.ac.uk --hmmDatabase Pfam ./sequence/single.seq
 ```
 
-
 How to use hmmer3 phmmer :
 > To use the client directly (without Docker) :
 ```
