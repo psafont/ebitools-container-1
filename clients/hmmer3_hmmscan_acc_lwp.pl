@@ -109,8 +109,6 @@ GetOptions(
 	'cut_ga' => \$params{'cut_ga'},               # GA thresholds
 	'nobias' => \$params{'nobias'},               # Bias composition filter
 
-
-
 	# Generic options
 	'email=s'       => \$params{'email'},          # User e-mail address
 	'title=s'       => \$params{'title'},          # Job title
@@ -311,19 +309,27 @@ sub rest_request {
 	&rest_error($response, $retVal);
 	print_debug_message( 'rest_request', 'retVal: ' . $retVal, 12 );
 	print_debug_message( 'rest_request', 'End', 11 );
-	
-	my $where_id_begin = index($retVal, '>>');
-	if ($where_id_begin>0) {
-		my $grab_id = substr($retVal, $where_id_begin+3, 5);
-		my $acc_id = rest_get_accid($grab_id);
-		print_debug_message( '############################################', 'where_id_begin:' ."\n" . $where_id_begin, 932 );
-		print_debug_message( '############################################', 'grab_id:' ."\n" . $grab_id . "=", 932  );
-		print_debug_message( '############################################', 'grab_id===>>' ."\n" . rest_get_accid($grab_id), 932 );
 		
-		#print_get_referenced_entries($grab_id); 
+	my @lines = split /\n/, $retVal;
+	foreach my $line (@lines) {
+	
+		my $where_id_begin = index($line, '>>');
 
-		$retVal =~ s/$grab_id/$acc_id/g;	
+		if ($where_id_begin>-1) {
+
+			my $grab_id = substr($line, $where_id_begin+3, 5);
+			my $acc_id = rest_get_accid($grab_id);
+			
+			if ($grab_id ) {
+				if ($acc_id ) {
+					$retVal =~ s/$grab_id/$acc_id/g;	
+				}
+			}
+
+		}		
+	
 	}
+
 	# Return the response data
 	return $retVal;
 }
@@ -336,7 +342,6 @@ http://www.ebi.ac.uk/ebi
   &rest_get_domains_referenced_in_entry($entryid);
 
 =cut
-
 
 sub rest_get_accid {
 	print_debug_message( 'rest_get_accid', '################ Begin', 932 );
@@ -790,9 +795,6 @@ sub load_params {
 	#print_debug_message( 'load_params', 'hmmDatabase:'.$params{'hmmDatabase'}, 1 );
 
 	print_debug_message( 'load_params', 'End', 1 );
-
-	
-
 	
 }
 
@@ -982,7 +984,6 @@ http://www.ebi.ac.uk/ebi
   &rest_get_domains_referenced_in_entry($entryid);
 
 =cut
-
 
 sub rest_get_domains_referenced_in_entry {
 	print_debug_message( 'rest_get_domains_referenced_in_entry', '################ Begin', 932 );

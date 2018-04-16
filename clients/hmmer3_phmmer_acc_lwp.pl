@@ -108,7 +108,6 @@ GetOptions(
 	'mx' => \$params{'mx'},                       # Substitution scoring matrix [BLOSUM45, BLOSUM62, BLOSUM90, PAM30, PAM70]
 	'nobias' => \$params{'nobias'},               # True for turnning off, bias composition filter
 
-
 	# Generic options
 	'email=s'       => \$params{'email'},          # User e-mail address
 	'title=s'       => \$params{'title'},          # Job title
@@ -314,17 +313,11 @@ sub rest_request {
 	foreach my $line (@lines) {
 	
 		my $where_id_begin = index($line, '>>');		
-		#print_debug_message( '############################################', 'The index of ID number:' ."\n" . $where_id_begin, 932 );
 
 		if ($where_id_begin>-1) {
-			print_debug_message( '########################################################################################', 'line:' ."\n" . $line, 932 );
 
 			my $grab_id = substr($line, $where_id_begin+3, 9);
 			my $acc_id = rest_get_accid($grab_id);
-			#print_debug_message( '############################################', 'where_id_begin:' ."\n" . $where_id_begin, 932 );
-			#print_debug_message( '############################################', 'grab_id:' ."\n" . $grab_id . "=", 932  );
-			#print_debug_message( '############################################', 'acc_id:' ."\n" . $acc_id . "=", 932  );
-			#print_debug_message( '############################################', 'grab_id===>>' ."\n" . rest_get_accid($grab_id), 932 );
 			
 			if ($grab_id ) {
 				if ($acc_id ) {
@@ -348,7 +341,6 @@ http://www.ebi.ac.uk/ebi
   &rest_get_domains_referenced_in_entry($entryid);
 
 =cut
-
 
 sub rest_get_accid {
 	print_debug_message( 'rest_get_accid', '################ Begin', 932 );
@@ -375,7 +367,6 @@ sub rest_get_accid {
 	#print_debug_message( 'rest_get_accid', 'End', 932 );
 	return ($accid);
 }
-
 
 =head2 rest_get_parameters()
 
