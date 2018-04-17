@@ -109,8 +109,6 @@ GetOptions(
 	'cut_ga' => \$params{'cut_ga'},               # GA thresholds
 	'nobias' => \$params{'nobias'},               # Bias composition filter
 
-
-
 	# Generic options
 	'email=s'       => \$params{'email'},          # User e-mail address
 	'title=s'       => \$params{'title'},          # Job title
@@ -311,10 +309,69 @@ sub rest_request {
 	&rest_error($response, $retVal);
 	print_debug_message( 'rest_request', 'retVal: ' . $retVal, 12 );
 	print_debug_message( 'rest_request', 'End', 11 );
+		
+	my @lines = split /\n/, $retVal;
+	foreach my $line (@lines) {
+	
+		my $where_id_begin = index($line, '>>');
+
+		if ($where_id_begin>-1) {
+
+			my $grab_id = substr($line, $where_id_begin+3, 5);
+			my $acc_id = rest_get_accid($grab_id);
+			
+			if ($grab_id ) {
+				if ($acc_id ) {
+					$retVal =~ s/$grab_id/$acc_id/g;	
+				}
+			}
+
+		}		
+	
+	}
 
 	# Return the response data
 	return $retVal;
 }
+
+=head2 rest_get_accid() by Joon
+
+Retrive acc with entry id.
+http://www.ebi.ac.uk/ebi
+/ws/rest/hmmer_seq/entry/14094/xref/uniprot
+  &rest_get_domains_referenced_in_entry($entryid);
+
+=cut
+
+sub rest_get_accid {
+	print_debug_message( 'rest_get_accid', '################ Begin', 932 );
+	#my (@reference);
+
+	my ($entryid) = @_;
+
+	
+	my $domainid ='hmmer_seq';	
+	my $ebisearch_baseUrl = 'http://www.ebi.ac.uk/ebisearch/ws/rest';
+
+	my $url                = $ebisearch_baseUrl . "/" .$domainid . "/entry/" . $entryid ."/xref/uniprot";
+	my $reference_list_xml_str = &rest_request($url);
+	my $reference_list_xml     = XMLin($reference_list_xml_str);
+
+
+
+	# read XML file
+	my $data = XMLin($reference_list_xml_str);
+
+	# print output
+	#print Dumper($data);
+	
+	my $accid = $data->{'entries'}->{'entry'}->{'references'}->{'reference'}->{'acc'};
+	print_debug_message( 'rest_get_accid', '######## 360 ' . $accid, 1 );
+	
+	print_debug_message( 'rest_get_accid', 'End', 932 );
+	return ($accid);
+}
+
 
 =head2 rest_get_parameters()
 
@@ -738,9 +795,6 @@ sub load_params {
 	#print_debug_message( 'load_params', 'hmmDatabase:'.$params{'hmmDatabase'}, 1 );
 
 	print_debug_message( 'load_params', 'End', 1 );
-
-	
-
 	
 }
 
@@ -921,6 +975,29 @@ sub write_file {
 	}
 	print_debug_message( 'write_file', 'End', 1 );
 }
+
+=head2 rest_get_domains_referenced_in_entry()
+
+Retrive acc with entry id.
+http://www.ebi.ac.uk/ebi
+/ws/rest/hmmer_seq/entry/14094/xref/uniprot
+  &rest_get_domains_referenced_in_entry($entryid);
+
+=cut
+
+sub rest_get_domains_referenced_in_entry {
+	print_debug_message( 'rest_get_domains_referenced_in_entry', '################ Begin', 932 );
+	my ($entryid) = @_;
+	
+	my $domainid ='hmmer_seq';	
+	my $ebisearch_baseUrl = 'http://www.ebi.ac.uk/ebisearch/ws/rest';
+
+	my $url                = $ebisearch_baseUrl . "/" .$domainid . "/entry/" . $entryid ."/xref/uniprot";
+	my $param_list_xml_str = &rest_request($url);
+	print_debug_message( 'rest_get_domains_referenced_in_entry', 'End', 932 );
+	return XMLin($param_list_xml_str, KeyAttr => [], ForceArray => ['entry', 'reference', 'value', 'field', 'fieldURL', 'viewURL']);
+}
+
 
 =head2 usage()
 
