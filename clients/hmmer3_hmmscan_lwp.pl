@@ -290,14 +290,56 @@ sub rest_request {
 	my $response = $ua->get($requestUrl,
 		'Accept-Encoding' => $can_accept, # HTTP compression.
 	);
-	print_debug_message( 'rest_request', 'HTTP status: ' . $response->code,
-		11 );
-	print_debug_message( 'rest_request',
-		'response length: ' . length($response->content()), 11 );
-	print_debug_message( 'rest_request',
-		'request:' ."\n" . $response->request()->as_string(), 32 );
-	print_debug_message( 'rest_request',
-		'response: ' . "\n" . $response->as_string(), 32 );
+	print_debug_message( 'rest_request', 'HTTP status: ' . $response->code,	11 );
+	print_debug_message( 'rest_request', 'response length: ' . length($response->content()), 11 );
+	print_debug_message( 'rest_request', 'request:' ."\n" . $response->request()->as_string(), 32 );
+	print_debug_message( 'rest_request', 'response: ' . "\n" . $response->as_string(), 32 );
+
+	# Unpack possibly compressed response.
+	my $retVal;
+	if ( defined($can_accept) && $can_accept ne '') {
+	    $retVal = $response->decoded_content();
+	}
+	# If unable to decode use orginal content.
+	$retVal = $response->content() unless defined($retVal);
+	# Check for an error.
+	&rest_error($response, $retVal);
+	print_debug_message( 'rest_request', 'End', 11 );		
+
+	# Return the response data
+	return $retVal;
+}
+
+
+=head2 rest_request_for_accid()
+
+Perform a REST request (HTTP GET).
+
+  my $response_str = &rest_request($url);
+
+=cut
+
+sub rest_request_for_accid {
+	print_debug_message( 'rest_request', 'Begin', 11 );
+	my $requestUrl = shift;
+	print_debug_message( 'rest_request', 'URL: ' . $requestUrl, 11 );
+
+	# Get an LWP UserAgent.
+	$ua = &rest_user_agent() unless defined($ua);
+	# Available HTTP compression methods.
+	my $can_accept;
+	eval {
+	    $can_accept = HTTP::Message::decodable();
+	};
+	$can_accept = '' unless defined($can_accept);
+	# Perform the request
+	my $response = $ua->get($requestUrl,
+		'Accept-Encoding' => $can_accept, # HTTP compression.
+	);
+	print_debug_message( 'rest_request', 'HTTP status: ' . $response->code,	11 );
+	print_debug_message( 'rest_request', 'response length: ' . length($response->content()), 11 );
+	print_debug_message( 'rest_request', 'request:' ."\n" . $response->request()->as_string(), 32 );
+	print_debug_message( 'rest_request', 'response: ' . "\n" . $response->as_string(), 32 );
 	# Unpack possibly compressed response.
 	my $retVal;
 	if ( defined($can_accept) && $can_accept ne '') {
@@ -333,6 +375,7 @@ sub rest_request {
 	# Return the response data
 	return $retVal;
 }
+
 
 =head2 rest_get_accid() by Joon
 
@@ -522,7 +565,9 @@ sub rest_get_result {
 	print_debug_message( 'rest_get_result', 'jobid: ' . $job_id, 1 );
 	print_debug_message( 'rest_get_result', 'type: ' . $type,    1 );
 	my $url    = $baseUrl . '/result/' . $job_id . '/' . $type;
-	my $result = &rest_request($url);
+# By Joon 23/03/18
+#	my $result = &rest_request($url);
+	my $result = &rest_request_for_accid($url);
 	print_debug_message( 'rest_get_result', length($result) . ' characters',
 		1 );
 	print_debug_message( 'rest_get_result', 'End', 1 );
