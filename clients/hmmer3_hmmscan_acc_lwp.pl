@@ -72,6 +72,9 @@ use XML::Simple;
 use Getopt::Long qw(:config no_ignore_case bundling);
 use File::Basename;
 use Data::Dumper;
+use JSON::XS;
+use Try::Tiny;
+
 
 # Base URL for service
 my $baseUrl = 'http://www.ebi.ac.uk/Tools/services/rest/hmmer3_hmmscan';
@@ -93,7 +96,7 @@ GetOptions(
 
 	# Tool specific options
 	'sequence=s'   => \$params{'sequence'},
-	'hmmDatabase=s'   => \$tool_params{'hmmDatabase'}, # database to search, Pfam Tigrfam gene3d pirsf superfamily are available
+	'hmmdb=s'   => \$tool_params{'hmmDatabase'}, # database to search, Pfam Tigrfam gene3d pirsf superfamily are available
 	'alignView'   => \$tool_params{'alignView'},  # Output alignment in result
 
 	'incE' => \$params{'incE'},   			  # Siginificance E-values[Model] (ex:0.01)
@@ -290,14 +293,56 @@ sub rest_request {
 	my $response = $ua->get($requestUrl,
 		'Accept-Encoding' => $can_accept, # HTTP compression.
 	);
-	print_debug_message( 'rest_request', 'HTTP status: ' . $response->code,
-		11 );
-	print_debug_message( 'rest_request',
-		'response length: ' . length($response->content()), 11 );
-	print_debug_message( 'rest_request',
-		'request:' ."\n" . $response->request()->as_string(), 32 );
-	print_debug_message( 'rest_request',
-		'response: ' . "\n" . $response->as_string(), 32 );
+	print_debug_message( 'rest_request', 'HTTP status: ' . $response->code,	11 );
+	print_debug_message( 'rest_request', 'response length: ' . length($response->content()), 11 );
+	print_debug_message( 'rest_request', 'request:' ."\n" . $response->request()->as_string(), 32 );
+	print_debug_message( 'rest_request', 'response: ' . "\n" . $response->as_string(), 32 );
+
+	# Unpack possibly compressed response.
+	my $retVal;
+	if ( defined($can_accept) && $can_accept ne '') {
+	    $retVal = $response->decoded_content();
+	}
+	# If unable to decode use orginal content.
+	$retVal = $response->content() unless defined($retVal);
+	# Check for an error.
+	&rest_error($response, $retVal);
+	print_debug_message( 'rest_request', 'End', 11 );		
+
+	# Return the response data
+	return $retVal;
+}
+
+
+=head2 rest_request_for_accid()
+
+Perform a REST request (HTTP GET).
+
+  my $response_str = &rest_request($url);
+
+=cut
+
+sub rest_request_for_accid {
+	print_debug_message( 'rest_request', 'Begin', 11 );
+	my $requestUrl = shift;
+	print_debug_message( 'rest_request', 'URL: ' . $requestUrl, 11 );
+
+	# Get an LWP UserAgent.
+	$ua = &rest_user_agent() unless defined($ua);
+	# Available HTTP compression methods.
+	my $can_accept;
+	eval {
+	    $can_accept = HTTP::Message::decodable();
+	};
+	$can_accept = '' unless defined($can_accept);
+	# Perform the request
+	my $response = $ua->get($requestUrl,
+		'Accept-Encoding' => $can_accept, # HTTP compression.
+	);
+	print_debug_message( 'rest_request', 'HTTP status: ' . $response->code,	11 );
+	print_debug_message( 'rest_request', 'response length: ' . length($response->content()), 11 );
+	print_debug_message( 'rest_request', 'request:' ."\n" . $response->request()->as_string(), 32 );
+	print_debug_message( 'rest_request', 'response: ' . "\n" . $response->as_string(), 32 );
 	# Unpack possibly compressed response.
 	my $retVal;
 	if ( defined($can_accept) && $can_accept ne '') {
@@ -322,7 +367,12 @@ sub rest_request {
 			
 			if ($grab_id ) {
 				if ($acc_id ) {
-					$retVal =~ s/$grab_id/$acc_id/g;	
+					
+					my $numeric1 = '0000'.$grab_id;
+					my $numeric2 = $grab_id;
+
+					$retVal =~ s/$numeric1/$acc_id/g;	
+					$retVal =~ s/$numeric2/$acc_id/g;	
 				}
 			}
 
@@ -333,6 +383,7 @@ sub rest_request {
 	# Return the response data
 	return $retVal;
 }
+
 
 =head2 rest_get_accid() by Joon
 
@@ -346,17 +397,15 @@ http://www.ebi.ac.uk/ebi
 sub rest_get_accid {
 	print_debug_message( 'rest_get_accid', '################ Begin', 932 );
 	#my (@reference);
-
+	my $each_acc_id;
 	my ($entryid) = @_;
-
 	
 	my $domainid ='hmmer_seq';	
-	my $ebisearch_baseUrl = 'http://www.ebi.ac.uk/ebisearch/ws/rest';
+	my $ebisearch_baseUrl = 'http://www.ebi.ac.uk/ebisearch/ws/rest/hmmer_seq';
 
-	my $url                = $ebisearch_baseUrl . "/" .$domainid . "/entry/" . $entryid ."/xref/uniprot";
+	my $url                = $ebisearch_baseUrl . "/entry/".$entryid."?fields=id,content";
 	my $reference_list_xml_str = &rest_request($url);
 	my $reference_list_xml     = XMLin($reference_list_xml_str);
-
 
 
 	# read XML file
@@ -365,11 +414,52 @@ sub rest_get_accid {
 	# print output
 	#print Dumper($data);
 	
-	my $accid = $data->{'entries'}->{'entry'}->{'references'}->{'reference'}->{'acc'};
-	print_debug_message( 'rest_get_accid', '######## 360 ' . $accid, 1 );
+	#my $accid = $data->{'entries'}->{'entry'}->{'references'}->{'reference'}->{'acc'};
+	#my $accid = $data->{'entries'}->{'entry'}->{'fields'}->{'field'}->{'values'}->{'value'};
+	my $acc_info = $data->{'entries'}->{'entry'}->{'fields'}->{'field'}->{'content'}->{'values'}->{'value'};
+
+	if ($acc_info) {
+		print_debug_message( 'rest_get_accid', '=IF=================================================acc_info: ' . $acc_info, 932 );
+
+
+		my $decoded;
+
+		try {
+			$decoded = JSON::XS::decode_json($acc_info);
+		}
+		catch {
+			warn "Caught JSON::XS decode error: $_";
+		};
+
+		#print Dumper $decoded;
+
+
+		foreach my $key(keys %$decoded) {
+			#print "$key\n";
+		}
+
+		my @dbs1 = $decoded->{'db'};
+		#print "==========================size=====================" .scalar @dbs1;
+
+		
+		my @selected_db = $dbs1[0]->[2];
+		
+		#print "==========================selected_db=====================\n";
+		#print Dumper @selected_db;
+
+		$each_acc_id = @selected_db->[0]->[0]->{'dn'};
+
+		
+		#print "==========================str=====================\n";
+		#print Dumper $each_acc_id;
+		
+
+	} else {
+		print_debug_message( 'rest_get_accid', '=ELSE=acc_info NONE: ' , 932 );
+	}
 	
 	print_debug_message( 'rest_get_accid', 'End', 932 );
-	return ($accid);
+	return ($each_acc_id);
 }
 
 
@@ -522,7 +612,9 @@ sub rest_get_result {
 	print_debug_message( 'rest_get_result', 'jobid: ' . $job_id, 1 );
 	print_debug_message( 'rest_get_result', 'type: ' . $type,    1 );
 	my $url    = $baseUrl . '/result/' . $job_id . '/' . $type;
-	my $result = &rest_request($url);
+# By Joon 23/03/18
+#	my $result = &rest_request($url);
+	my $result = &rest_request_for_accid($url);
 	print_debug_message( 'rest_get_result', length($result) . ' characters',
 		1 );
 	print_debug_message( 'rest_get_result', 'End', 1 );
@@ -718,6 +810,15 @@ sub submit_job {
 
 	# Set input sequence
 	$tool_params{'sequence'} = shift;
+
+	# Set input hmmdb ;gene3d, pfam, tigrfam, superfamily, pirsf
+	my $param_hmmdb = $tool_params{'hmmDatabase'};
+	if ($param_hmmdb eq 'pfam') {
+		$tool_params{'hmmDatabase'} = 'Pfam';
+	}	
+	if ($param_hmmdb eq 'tigrfam') {
+		$tool_params{'hmmDatabase'} = 'Tigrfam';
+	}	
 
 	# Load parameters
 	&load_params();
@@ -1022,10 +1123,7 @@ HMMER hmmscan is used to search sequences against collections of profiles.
 
 [Optional]
 
-  --database         : str  : database to search,
-                              Pfam Tigrfam gene3d pirsf superfamily are available
-  --hmmDatabase      : str  : database to search,
-                              Pfam Tigrfam gene3d pirsf superfamily are available
+  --hmmdb			 : str  : This field indicates which profile HMM database the query should be searched against. Accepted values are gene3d, pfam, tigrfam, superfamily, pirsf
   --alignView        :      : Output alignment in result
   --incE             :      : Siginificance E-values[Model] (ex:0.01)
   --incdomE          :      : Siginificance E-values[Hit] (ex:0.03)
