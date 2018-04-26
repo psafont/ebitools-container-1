@@ -72,10 +72,11 @@ use XML::Simple;
 use Getopt::Long qw(:config no_ignore_case bundling);
 use File::Basename;
 use Data::Dumper;
+use JSON::XS;
+use Try::Tiny;
 
 # Base URL for service
 my $baseUrl = 'http://www.ebi.ac.uk/Tools/services/rest/hmmer3_hmmscan';
-
 
 # Set interval for checking status
 my $checkInterval = 10;
@@ -93,7 +94,7 @@ GetOptions(
 
 	# Tool specific options
 	'sequence=s'   => \$params{'sequence'},
-	'hmmDatabase=s'   => \$tool_params{'hmmDatabase'}, # database to search, Pfam Tigrfam gene3d pirsf superfamily are available
+	'hmmdb=s'   => \$tool_params{'hmmDatabase'}, # database to search, Pfam Tigrfam gene3d pirsf superfamily are available
 	'alignView'   => \$tool_params{'alignView'},  # Output alignment in result
 
 	'incE' => \$params{'incE'},   			  # Siginificance E-values[Model] (ex:0.01)
@@ -202,6 +203,10 @@ else {
 	# Load the sequence data and submit.
 	&submit_job( &load_data() );
 }
+
+# hmmscan db index
+my $db_index = "4";# default Pfam
+
 
 =head1 FUNCTIONS
 
@@ -359,12 +364,23 @@ sub rest_request_for_accid {
 
 		if ($where_id_begin>-1) {
 
-			my $grab_id = substr($line, $where_id_begin+3, 5);
+			my $grab_id = substr($line, $where_id_begin+3, 30);
+			$grab_id =~ s/\s*$//; # trim left whitespace
+
+			#print "=grab_id=====================\n";
+			#print Dumper $grab_id;
+
 			my $acc_id = rest_get_accid($grab_id);
 			
 			if ($grab_id ) {
 				if ($acc_id ) {
-					$retVal =~ s/$grab_id/$acc_id/g;	
+					
+					my $numeric1 = ' '.sprintf ("%09d", $grab_id ).' ';
+					my $numeric2 = ' '.$grab_id.' ';
+					my $new_id = ' '.$acc_id.' ';
+
+					$retVal =~ s/$numeric1/$new_id/g;	
+					$retVal =~ s/$numeric2/$new_id/g;	
 				}
 			}
 
@@ -377,42 +393,59 @@ sub rest_request_for_accid {
 }
 
 
-=head2 rest_get_accid() by Joon
+=head2 rest_get_accid()
 
 Retrive acc with entry id.
-http://www.ebi.ac.uk/ebi
-/ws/rest/hmmer_seq/entry/14094/xref/uniprot
-  &rest_get_domains_referenced_in_entry($entryid);
+http://www.ebi.ac.uk/ebisearch/ws/rest/hmmer_seq/entry/14094/xref/uniprot
+http://www.ebi.ac.uk/ebisearch/ws/rest/hmmer_seq/entry/14094?fields=id,content
 
 =cut
 
 sub rest_get_accid {
-	print_debug_message( 'rest_get_accid', '################ Begin', 932 );
+	print_debug_message( 'rest_get_accid', '##### Begin', 42 );
 	#my (@reference);
-
+	my $each_acc_id;
 	my ($entryid) = @_;
-
 	
-	my $domainid ='hmmer_seq';	
-	my $ebisearch_baseUrl = 'http://www.ebi.ac.uk/ebisearch/ws/rest';
+	#my $domainid ='hmmer_seq';	
+	my $domainid ='hmmer_hmm';	
+	my $ebisearch_baseUrl = 'http://www.ebi.ac.uk/ebisearch/ws/rest/hmmer_hmm';
 
-	my $url                = $ebisearch_baseUrl . "/" .$domainid . "/entry/" . $entryid ."/xref/uniprot";
+	my $url = $ebisearch_baseUrl . "/entry/".$entryid."?fields=id,content";
 	my $reference_list_xml_str = &rest_request($url);
 	my $reference_list_xml     = XMLin($reference_list_xml_str);
 
-
-
 	# read XML file
-	my $data = XMLin($reference_list_xml_str);
+	my $data = XMLin($reference_list_xml_str);	
+	my $acc_info = $data->{'entries'}->{'entry'}->{'fields'}->{'field'}->{'content'}->{'values'}->{'value'};
 
-	# print output
-	#print Dumper($data);
+	if ($acc_info) {
+		print_debug_message( 'rest_get_accid', 'acc_info is: ' . $acc_info, 42 );
+
+		my $decoded;
+
+		try {
+			$decoded = JSON::XS::decode_json($acc_info);
+		}
+		catch {
+			warn "Caught JSON::XS decode error: $_";
+		};
+
+		#foreach my $key(keys %$decoded) {
+		#	print "$key\n";
+		#}
+
+		my @selected_db = $decoded->[$db_index];
+
+#		$each_acc_id = @selected_db->[0]->[0]->{'dn'};
+		$each_acc_id = $selected_db[0]->{'acc'};	
+
+	} else {
+		print_debug_message( 'rest_get_accid', '=ELSE=acc_info NONE: ' , 42 );
+	}
 	
-	my $accid = $data->{'entries'}->{'entry'}->{'references'}->{'reference'}->{'acc'};
-	print_debug_message( 'rest_get_accid', '######## 360 ' . $accid, 1 );
-	
-	print_debug_message( 'rest_get_accid', 'End', 932 );
-	return ($accid);
+	print_debug_message( 'rest_get_accid', 'End', 42 );
+	return ($each_acc_id);
 }
 
 
@@ -473,8 +506,6 @@ sub rest_run {
 		print_debug_message( 'rest_run', 'title: ' . $title, 1 );
 	}
 	print_debug_message( 'rest_run', 'params>>: ' . Dumper($params), 1 );
-
-
 	
 	# Get an LWP UserAgent.
 	$ua = &rest_user_agent() unless defined($ua);
@@ -565,7 +596,7 @@ sub rest_get_result {
 	print_debug_message( 'rest_get_result', 'jobid: ' . $job_id, 1 );
 	print_debug_message( 'rest_get_result', 'type: ' . $type,    1 );
 	my $url    = $baseUrl . '/result/' . $job_id . '/' . $type;
-# By Joon 23/03/18
+
 #	my $result = &rest_request($url);
 	my $result = &rest_request_for_accid($url);
 	print_debug_message( 'rest_get_result', length($result) . ' characters',
@@ -764,6 +795,30 @@ sub submit_job {
 	# Set input sequence
 	$tool_params{'sequence'} = shift;
 
+	# Set input hmmdb ;gene3d, pfam, tigrfam, superfamily, pirsf
+	my $param_hmmdb = $tool_params{'hmmDatabase'};
+
+	if ($param_hmmdb eq 'treefam'  ) {
+		$db_index = "2";
+	}	
+	if ($param_hmmdb eq 'gene3d'  ) {
+		$db_index = "3";
+	}	
+	if ($param_hmmdb eq 'pfam' || $param_hmmdb eq 'Pfam' ) {
+		$tool_params{'hmmDatabase'} = 'Pfam';
+		$db_index = "4";
+	}	
+	if ($param_hmmdb eq 'superfamily'  ) {
+		$db_index = "5";
+	}	
+	if ($param_hmmdb eq 'tigrfam' || $param_hmmdb eq 'tigrfam') {
+		$tool_params{'hmmDatabase'} = 'Tigrfam';
+		$db_index = "6";
+	}		
+	if ($param_hmmdb eq 'pirsf'  ) {
+		$db_index = "7";
+	}	
+ 
 	# Load parameters
 	&load_params();
 
@@ -1021,28 +1076,6 @@ sub write_file {
 	print_debug_message( 'write_file', 'End', 1 );
 }
 
-=head2 rest_get_domains_referenced_in_entry()
-
-Retrive acc with entry id.
-http://www.ebi.ac.uk/ebi
-/ws/rest/hmmer_seq/entry/14094/xref/uniprot
-  &rest_get_domains_referenced_in_entry($entryid);
-
-=cut
-
-sub rest_get_domains_referenced_in_entry {
-	print_debug_message( 'rest_get_domains_referenced_in_entry', '################ Begin', 932 );
-	my ($entryid) = @_;
-	
-	my $domainid ='hmmer_seq';	
-	my $ebisearch_baseUrl = 'http://www.ebi.ac.uk/ebisearch/ws/rest';
-
-	my $url                = $ebisearch_baseUrl . "/" .$domainid . "/entry/" . $entryid ."/xref/uniprot";
-	my $param_list_xml_str = &rest_request($url);
-	print_debug_message( 'rest_get_domains_referenced_in_entry', 'End', 932 );
-	return XMLin($param_list_xml_str, KeyAttr => [], ForceArray => ['entry', 'reference', 'value', 'field', 'fieldURL', 'viewURL']);
-}
-
 
 =head2 usage()
 
@@ -1067,10 +1100,7 @@ HMMER hmmscan is used to search sequences against collections of profiles.
 
 [Optional]
 
-  --database         : str  : database to search,
-                              Pfam Tigrfam gene3d pirsf superfamily are available
-  --hmmDatabase      : str  : database to search,
-                              Pfam Tigrfam gene3d pirsf superfamily are available
+  --hmmdb			 : str  : This field indicates which profile HMM database the query should be searched against. Accepted values are gene3d, pfam, tigrfam, superfamily, pirsf
   --alignView        :      : Output alignment in result
   --incE             :      : Siginificance E-values[Model] (ex:0.01)
   --incdomE          :      : Siginificance E-values[Hit] (ex:0.03)
