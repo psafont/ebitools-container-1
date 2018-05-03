@@ -93,43 +93,53 @@ my %tool_params = ();
 GetOptions(
 
 	# Tool specific options
-	'sequence=s'   => \$params{'sequence'},
-	'hmmdb=s'   => \$tool_params{'hmmDatabase'}, # database to search, Pfam Tigrfam gene3d pirsf superfamily are available
-	'alignView'   => \$tool_params{'alignView'},  # Output alignment in result
+	'sequence=s'   => \$params{'sequence'},			
+	'hmmdb=s'   => \$tool_params{'hmmDatabase'},	# database to search, Pfam Tigrfam gene3d pirsf superfamily are available
+	'alignView=s'   => \$tool_params{'alignView'},	  # Output alignment in result
 
-	'incE' => \$params{'incE'},   			  # Siginificance E-values[Model] (ex:0.01)
-	'E' => \$tool_params{'E'}, 		              # Report E-values[Model] (ex:1)
-	'domE' => \$tool_params{'domE'},              # Report E-values[Hit] (ex:1)
-	'incdomE' => \$params{'incdomE'},             # Siginificance E-values[Hit] (ex:0.03)
+	'incE=f' => \$tool_params{'incE'},				# Siginificance E-values[Model] (ex:0.01)
+	'E=f' => \$tool_params{'E'},				# Report E-values[Model] (ex:1)
+	'domE=f' => \$tool_params{'domE'},			# Report E-values[Hit] (ex:1)
+	'incdomE=f' => \$tool_params{'incdomE'},			# Siginificance E-values[Hit] (ex:0.03)
 
-	'incdomT' => \$params{'incdomT'},             # Significance bit scores[Hit] (ex:22))
-	'T' => \$params{'T'},                         # Report bit scores[Sequence] (ex:7)
-	'domT' => \$tool_params{'domT'},              # Report bit scores[Hit] (ex:5)
-	'incT' => \$params{'incT'},                   # Significance bit scores[Sequence] (ex:25)
+	'incdomT=f' => \$tool_params{'incdomT'},			# Significance bit scores[Hit] (ex:22))
+	'T=f' => \$tool_params{'T'},						# Report bit scores[Sequence] (ex:7)
+	'domT=f' => \$tool_params{'domT'},			# Report bit scores[Hit] (ex:5)
+	'incT=f' => \$tool_params{'incT'},					# Significance bit scores[Sequence] (ex:25)
 
-	'cut_ga' => \$params{'cut_ga'},               # GA thresholds
-	'nobias' => \$params{'nobias'},               # Bias composition filter
+	'cut_ga' => \$params{'cut_ga'},				# GA thresholds
+	'nobias' => \$params{'nobias'},				# Bias composition filter
 
 	# Generic options
-	'email=s'       => \$params{'email'},          # User e-mail address
-	'title=s'       => \$params{'title'},          # Job title
-	'outfile=s'     => \$params{'outfile'},        # File name for results
-	'outformat=s'   => \$params{'outformat'},      # Output format for results
-	'jobid=s'       => \$params{'jobid'},          # JobId
-	'help|h'        => \$params{'help'},           # Usage help
-	'async'         => \$params{'async'},          # Asynchronous submission
-	'polljob'       => \$params{'polljob'},        # Get job result
-	'resultTypes'   => \$params{'resultTypes'},    # Get result types
-	'status'        => \$params{'status'},         # Get job status
-	'params'        => \$params{'params'},         # List input parameters
-	'paramDetail=s' => \$params{'paramDetail'},    # Get details for parameter
-	'quiet'         => \$params{'quiet'},          # Decrease output level
-	'verbose'       => \$params{'verbose'},        # Increase output level
-	'debugLevel=i'  => \$params{'debugLevel'},     # Debug output level
-	'baseUrl=s'     => \$baseUrl,                  # Base URL for service.
+	'email=s'       => \$params{'email'},		# User e-mail address
+	'title=s'       => \$params{'title'},		# Job title
+	'outfile=s'     => \$params{'outfile'},		# File name for results
+	'outformat=s'   => \$params{'outformat'},	# Output format for results
+	'jobid=s'       => \$params{'jobid'},		# JobId
+	'help|h'        => \$params{'help'},		# Usage help
+	'async'         => \$params{'async'},		# Asynchronous submission
+	'polljob'       => \$params{'polljob'},		# Get job result
+	'resultTypes'   => \$params{'resultTypes'},	# Get result types
+	'status'        => \$params{'status'},		# Get job status
+	'params'        => \$params{'params'},		# List input parameters
+	'paramDetail=s' => \$params{'paramDetail'},	# Get details for parameter
+	'quiet'         => \$params{'quiet'},		# Decrease output level
+	'verbose'       => \$params{'verbose'},		# Increase output level
+	'debugLevel=i'  => \$params{'debugLevel'},	# Debug output level
+	'baseUrl=s'     => \$baseUrl,				# Base URL for service.
+
+	'acc=i'			=> \$params{'acc'}			# Get accession ID, how many from top
 );
 if ( $params{'verbose'} ) { $outputLevel++ }
 if ( $params{'quiet'} )  { $outputLevel-- }
+
+if ( lc $tool_params{'alignView'} eq 'true') {
+	delete $tool_params{'alignView'};
+} elsif ( lc $tool_params{'alignView'} eq 'false') {
+} else {		
+	print "The alignView option should be one of the restricted values : true or false. \n";
+	exit(0);
+}
 
 # Debug mode: LWP version
 &print_debug_message( 'MAIN', 'LWP::VERSION: ' . $LWP::VERSION,
@@ -358,17 +368,29 @@ sub rest_request_for_accid {
 	print_debug_message( 'rest_request', 'End', 11 );
 		
 	my @lines = split /\n/, $retVal;
+	
+	my $v_cnt = 0;
+	my $top_acc = 20;
+	if (defined $params{'acc'}) {
+		$top_acc = $params{'acc'};
+	}
+
 	foreach my $line (@lines) {
 	
+		# Updating HMMER numeric ID to Accession
+		if ( $v_cnt >= $top_acc) {
+			 last;			 
+		}
+
 		my $where_id_begin = index($line, '>>');
 
-		if ($where_id_begin>-1) {
+		if ($where_id_begin>-1) {		
+			$v_cnt++;
 
 			my $grab_id = substr($line, $where_id_begin+3, 30);
 			$grab_id =~ s/\s*$//; # trim left whitespace
 
 			#print "=grab_id=====================\n";
-			#print Dumper $grab_id;
 
 			my $acc_id = rest_get_accid($grab_id);
 			
@@ -420,7 +442,7 @@ sub rest_get_accid {
 	my $acc_info = $data->{'entries'}->{'entry'}->{'fields'}->{'field'}->{'content'}->{'values'}->{'value'};
 
 	if ($acc_info) {
-		print_debug_message( 'rest_get_accid', 'acc_info is: ' . $acc_info, 42 );
+		print_debug_message( 'rest_get_accid', '#acc_info is: ' . $acc_info, 42 );
 
 		my $decoded;
 
@@ -431,17 +453,12 @@ sub rest_get_accid {
 			warn "Caught JSON::XS decode error: $_";
 		};
 
-		#foreach my $key(keys %$decoded) {
-		#	print "$key\n";
-		#}
-
 		my @selected_db = $decoded->[$db_index];
 
-#		$each_acc_id = @selected_db->[0]->[0]->{'dn'};
 		$each_acc_id = $selected_db[0]->{'acc'};	
 
 	} else {
-		print_debug_message( 'rest_get_accid', '=ELSE=acc_info NONE: ' , 42 );
+		print_debug_message( 'rest_get_accid', '#acc_info NONE: ' , 42 );
 	}
 	
 	print_debug_message( 'rest_get_accid', 'End', 42 );
@@ -1102,9 +1119,9 @@ HMMER hmmscan is used to search sequences against collections of profiles.
 
   --hmmdb			 : str  : This field indicates which profile HMM database the query should be searched against. Accepted values are gene3d, pfam, tigrfam, superfamily, pirsf
   --alignView        :      : Output alignment in result
-  --incE             :      : Siginificance E-values[Model] (ex:0.01)
+  --incE             : real : Siginificance E-values[Model] (ex:0.01)
   --incdomE          :      : Siginificance E-values[Hit] (ex:0.03)
-  -E                 :      : Report E-values[Model] (ex:1)
+  --E                : int  : Report E-values[Model] (ex:1)
   --domE             :      : Report E-values[Hit] (ex:1)
   --incT             :      : Significance bit scores[Sequence] (ex:25)
   --incdomT          :      : Significance bit scores[Hit] (ex:22)
