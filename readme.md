@@ -19,10 +19,14 @@
 
 How to use hmmer3 hmmscan :
 > To use the client directly (without Docker) :
+>> single sequence input 
 ```
 ./clients/hmmer3_hmmscan_lwp.pl --email yours@email.ac.uk --hmmDatabase Pfam ./sequence/single.seq
 ```
-
+>> more than a sequence input (FASTA format)
+```
+./clients/hmmer3_hmmscan_lwp.pl --email yours@email.ac.uk --hmmDatabase Pfam --multifasta ./sequence/multi.seq
+```
 > With Docker :
 ```
 docker run image_name hmmer3_hmmscan_lwp.pl --email yours@email.ac.uk --hmmDatabase Pfam ./sequence/single.seq
@@ -30,8 +34,13 @@ docker run image_name hmmer3_hmmscan_lwp.pl --email yours@email.ac.uk --hmmDatab
 
 How to use hmmer3 phmmer :
 > To use the client directly (without Docker) :
+>> single sequence input 
 ```
 ./clients/hmmer3_phmmer_lwp.pl --email yours@email.ac.uk --seqdb uniprotkb ./sequence/single.seq
+```
+>> more than a sequence input (FASTA format)
+```
+./clients/hmmer3_phmmer_lwp.pl --email yours@email.ac.uk --seqdb swissprot --multifasta ./sequence/multi.seq
 ```
 
 > With Docker :
