@@ -40,7 +40,7 @@ L<http://www.ebi.ac.uk/Tools/webservices/tutorials/perl>
 
 =head1 LICENSE
 
-Copyright 2012-2014 EMBL - European Bioinformatics Institute
+Copyright 2012-2018 EMBL - European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -79,7 +79,7 @@ use Try::Tiny;
 my $baseUrl = 'http://www.ebi.ac.uk/Tools/services/rest/hmmer3_phmmer';
 
 # Set interval for checking status
-my $checkInterval = 10;
+my $checkInterval = 5;
 
 # Set maximum number of 'ERROR' status calls to call job failed.
 my $maxErrorStatusCount = 3;
@@ -99,48 +99,44 @@ my %params = (
 my %tool_params = ();
 GetOptions(
 
-	# Tool specific options
-	'sequence=s'   => \$params{'sequence'},		# string Input Sequence 
-	'seqdb=s'   => \$tool_params{'seqdb'},		# string Frequently used, Reference Proteomes:uniprotrefprot, UniProtKB:uniprotkb, SwissProt:swissprot, PDB:pdb
-	'alignView=s'   => \$tool_params{'alignView'},# Output alignment in result. The default is true.
-	
-	'E=f' => \$tool_params{'E'}, 					# Report E-values[Model] (ex:1)	
-	'incE=f' => \$tool_params{'incE'},   			# Siginificance E-values[Model] (ex:0.01)
-	'domE=f' => \$tool_params{'domE'},            # Report E-values[Hit] (ex:1)
-	'incdomE=f' => \$tool_params{'incdomE'},           # Siginificance E-values[Hit] (ex:0.03)
-	
-	'T=f' => \$tool_params{'T'},                       # Report bit scores[Sequence] (ex:7)
-	'incT=f' => \$tool_params{'incT'},                 # Significance bit scores[Sequence] (ex:25)
-	'domT=f' => \$tool_params{'domT'},            # Report bit scores[Hit] (ex:5)
-	'incdomT=f' => \$tool_params{'incdomT'},			# Significance bit scores[Hit] (ex:22))
-
-	'popen' => \$params{'popen'},               # Gap Penalties for Open
-	'pextend' => \$params{'pextend'},           # Gap Penalties for Extended
-	'mx' => \$params{'mx'},                     # Substitution scoring matrix [BLOSUM45, BLOSUM62, BLOSUM90, PAM30, PAM70]
-	'nobias' => \$params{'nobias'},             # True for turnning off, bias composition filter
+	# Tool specific options	
+	'database|D=s'	=> \$tool_params{'hmmDatabase'},# Ddatabase to search, Reference Proteomes:uniprotrefprot, UniProtKB:uniprotkb, SwissProt:swissprot, PDB:pdb
+	'seqdb|D=s'     => \$tool_params{'seqdb'},      # Compatability database option	
+	'E|e=f'         => \$tool_params{'E'},          # Report E-values[Model] (ex:1)
+	'domE|f=f'      => \$tool_params{'domE'},       # Report E-values[Hit] (ex:1)
+	'incE|g=f'      => \$tool_params{'incE'},       # Siginificance E-values[Model] (ex:0.01)
+	'incdomE|h=f'	=> \$tool_params{'incdomE'},    # Siginificance E-values[Hit] (ex:0.03)
+	'T|t=f'         => \$tool_params{'T'},          # Report bit scores[Sequence] (ex:7)
+	'domT|u=f'      => \$tool_params{'domT'},       # Report bit scores[Hit] (ex:5)
+	'incT|v=f'      => \$tool_params{'incT'},       # Significance bit scores[Sequence] (ex:25)
+	'incdomT|w=f'   => \$tool_params{'incdomT'},    # Significance bit scores[Hit] (ex:22))
+	'popen|o=f'     => \$tool_params{'popen'},      # Gap Penalties for Open
+	'pextend|p=f'   => \$tool_params{'pextend'},    # Gap Penalties for Extended
+	'mx|m=s'        => \$tool_params{'mx'},         # Substitution scoring matrix [BLOSUM45, BLOSUM62, BLOSUM90, PAM30, PAM70]
+	'nobias|n=s'    => \$tool_params{'nobias'},     # True for turnning off, bias composition filter
 
 	# Generic options
-	'email=s'       => \$params{'email'},		# User e-mail address
-	'title=s'       => \$params{'title'},		# Job title
-	'outfile=s'     => \$params{'outfile'},		# File name for results
-	'outformat=s'   => \$params{'outformat'},	# Output format for results
-	'jobid=s'       => \$params{'jobid'},		# JobId
-	'help|h'        => \$params{'help'},		# Usage help
-	'async'         => \$params{'async'},		# Asynchronous submission
-	'polljob'       => \$params{'polljob'},		# Get job result
-	'resultTypes'   => \$params{'resultTypes'},	# Get result types
-	'status'        => \$params{'status'},		# Get job status
-	'params'        => \$params{'params'},      # List input parameters
-	'paramDetail=s' => \$params{'paramDetail'}, # Get details for parameter
-	'quiet'         => \$params{'quiet'},		# Decrease output level
-	'verbose'       => \$params{'verbose'},		# Increase output level
-	'debugLevel=i'  => \$params{'debugLevel'},	# Debug output level
-	'baseUrl=s'     => \$baseUrl,				# Base URL for service.
-	
-	'useSeqId'      => \$params{'useSeqId'},	# Seq Id file name
-	'maxJobs=i'     => \$params{'maxJobs'},		# Max. parallel jobs
-	'multifasta'   => \$params{'multifasta'},	# Multiple fasta input
-	'acc=i'     => \$params{'acc'}				# Get accession ID, how many from top
+	'email=s'       => \$params{'email'},           # User e-mail address
+	'title=s'       => \$params{'title'},           # Job title
+	'outfile=s'     => \$params{'outfile'},         # File name for results
+	'outformat=s'   => \$params{'outformat'},       # Output format for results
+	'jobid=s'       => \$params{'jobid'},           # JobId
+	'help|h'        => \$params{'help'},            # Usage help
+	'async'         => \$params{'async'},           # Asynchronous submission
+	'polljob'       => \$params{'polljob'},         # Get job result
+	'resultTypes'   => \$params{'resultTypes'},     # Get result types
+	'status'        => \$params{'status'},          # Get job status
+	'params'        => \$params{'params'},          # List input parameters
+	'paramDetail=s' => \$params{'paramDetail'},     # Get details for parameter
+	'quiet'         => \$params{'quiet'},           # Decrease output level
+	'verbose'       => \$params{'verbose'},         # Increase output level
+	'debugLevel=i'  => \$params{'debugLevel'},      # Debug output level
+	'baseUrl=s'     => \$baseUrl,                   # Base URL for service.	
+	'useSeqId'      => \$params{'useSeqId'},        # Seq Id file name
+	'maxJobs=i'     => \$params{'maxJobs'},         # Max. parallel jobs
+	'alignView=s'   => \$tool_params{'alignView'},  # Output alignment in result. The default is true.
+	'multifasta'	=> \$params{'multifasta'},      # Multiple fasta input
+	'acc=i'         => \$params{'acc'}              # Get accession ID, how many from top
 );
 if ( $params{'verbose'} ) { $outputLevel++ }
 if ( $params{'quiet'} )  { $outputLevel-- }
@@ -154,6 +150,18 @@ if ( lc $tool_params{'alignView'} eq 'true') {
 } elsif ( lc $tool_params{'alignView'} eq 'false') {
 } else {		
 	print "The alignView option should be one of the restricted values : true or false. \n";
+	exit(0);
+}
+
+if (!($tool_params{'nobias'})) {
+	$tool_params{'nobias'} = 'true';
+}
+
+if ( lc $tool_params{'nobias'} eq 'true') {
+	delete $tool_params{'nobias'};
+} elsif ( lc $tool_params{'nobias'} eq 'false') {
+} else {		
+	print "The nobias option should be one of the restricted values : true or false. The default is true. \n";
 	exit(0);
 }
 
@@ -1424,35 +1432,35 @@ HMMER phmmer is used to search sequences against collections of profiles.
 
 [Required]
 
-  seqFile            : file : aligned sequences ("-" for STDIN)
   --email            : str  : e-mail address
-  --seqdb			 : str  : The sequence database field changes which target sequence database is searched. Accepted values are ensemblgenomes,uniprotkb,uniprotrefprot,rp15,rp35,rp55,rp75,ensembl,merops,qfo,swissprot,pdb,meropsscan
+  -D, --database     : str  : The sequence database field changes which target sequence database is searched. Accepted values are ensemblgenomes,uniprotkb,uniprotrefprot,rp15,rp35,rp55,rp75,ensembl,merops,qfo,swissprot,pdb,meropsscan
+  -D, --seqdb	     : str  : Compatability database option
+  seqFile            : file : query sequence ("-" for STDIN, \@filename for
+                              identifier list file)
 
 [Optional]
 
-  --incE             : real : Siginificance E-values[Model] (ex:0.01)
-  --incdomE          : real : Siginificance E-values[Hit] (ex:0.03)
-  --E                : int  : Report E-values[Model] (ex:1)
-  --domE             : int  : Report E-values[Hit] (ex:1)
-
-  --incT             : real : Significance bit scores[Sequence] (ex:25)
-  --incdomT          : real : Significance bit scores[Hit] (ex:22)
-  --T                : int  : Report bit scores[Sequence] (ex:7)
-  --domT             : int  : Report bit scores[Hit] (ex:5)
-
-  --popen            :      : Gap Penalties for Open
-  --pextend          :      : Gap Penalties for Extend
-  --mx               : str  : Substitution scoring matrix
+  -e, --E            : real : Report E-values[Model] (ex:1)
+  -f, --domE         : real : Report E-values[Hit] (ex:1)
+  -g, --incE         : real : Siginificance E-values[Model] (ex:0.01)
+  -h, --incdomE      : real : Siginificance E-values[Hit] (ex:0.03)
+  -t, --T            : real : Report bit scores[Sequence] (ex:7)
+  -u, --domT         : real : Report bit scores[Hit] (ex:5)
+  -v, --incT         : real : Significance bit scores[Sequence] (ex:25)
+  -w, --incdomT      : real : Significance bit scores[Hit] (ex:22)
+  -n, --nobias       : str  : True for turnning off, bias composition filter
+  -o, --popen        : real : Gap Penalties for Open
+  -p, --pextend      : real : Gap Penalties for Extend
+  -m, --mx           : str  : Substitution scoring matrix
                               [BLOSUM45, BLOSUM62, BLOSUM90, PAM30, PAM70]
-  --nobias           : str  : True for turnning off, bias composition filter
-  --alignView        : str  : Output alignment in result
+  -A, --alignView    : str  : Output alignment in result
+  --acc              : int  : Get accession ID, how many from top. The default is 20
   --multifasta       :      : treat input as a set of fasta formatted sequences
 
 [General]
 
   -h, --help         :      : prints this help text
       --async        :      : forces to make an asynchronous query
-      --email        : str  : e-mail address
       --title        : str  : title for job
       --status       :      : get job status
       --resultTypes  :      : get available result types for job
@@ -1461,28 +1469,27 @@ HMMER phmmer is used to search sequences against collections of profiles.
                               was submitted.
       --outfile      : str  : file name for results (default is jobid;
                               "-" for STDOUT)
+      --useSeqId     :      : use sequence identifiers for output filenames. 
+                              Only available in multifasta or list file modes.
+      --maxJobs      : int  : maximum number of concurrent jobs. Only 
+                              available in multifasta or list file modes.
       --outformat    : str  : result format to retrieve
       --params       :      : list input parameters
       --paramDetail  : str  : display details for input parameter
       --quiet        :      : decrease output
       --verbose      :      : increase output
-      --useSeqId     :      : use sequence identifiers for output filenames. 
-                              Only available in multifasta or list file modes.
-      --maxJobs      : int  : maximum number of concurrent jobs. Only 
-                              available in multifasta or list file modes.
-      --acc          : int  : Get accession ID, how many from top. The default is 20
 
 Synchronous job:
 
   The results/errors are returned as soon as the job is finished.
-  Usage: perl $scriptName --email <your\@email> [options...] <seqFile>
+  Usage: $scriptName --email <your\@email> [options...] seqFile
   Returns: results as an attachment
 
 Asynchronous job:
 
   Use this if you want to retrieve the results at a later time. The results
   are stored for up to 24 hours.
-  Usage: perl $scriptName --async --email <your\@email> [options...] <seqFile>
+  Usage: perl $scriptName --async --email <your\@email> [options...] seqFile
   Returns: jobid
 
   Use the jobid to query for the status of the job. If the job is finished,
@@ -1493,12 +1500,12 @@ Asynchronous job:
 
 Further information:
 
-  http://www.ebi.ac.uk/Tools/webservices/services/pfa/hmmer_hmmscan_rest
-  http://www.ebi.ac.uk/Tools/webservices/tutorials/perl
+  https://www.ebi.ac.uk/seqdb/confluence/display/THD/Hmmer3+phmmer
+  https://www.ebi.ac.uk/seqdb/confluence/display/JDSAT/Job+Dispatcher+Sequence+Analysis+Tools+Home
 
 Support/Feedback:
 
-  http://www.ebi.ac.uk/support/
+  https://www.ebi.ac.uk/support/
 EOF
 }
 
