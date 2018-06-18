@@ -1,11 +1,11 @@
 FROM scottw/alpine-perl:5.26.0
-MAINTAINER Pau Ruiz Safont psafont@ebi.ac.uk
+MAINTAINER EBI, Web Production Team support@ebi.ac.uk
 
 # Dependencies
 RUN apk update && \
     apk add expat-dev
 
-RUN cpanm Bundle::LWP REST::Client XML::Simple YAML::Syck
+RUN cpanm Bundle::LWP REST::Client XML::Simple YAML::Syck JSON::XS
 
 WORKDIR /usr/src/ebitools
 ENV PATH="/usr/src/ebitools/:${PATH}"
