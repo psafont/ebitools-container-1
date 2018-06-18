@@ -1019,8 +1019,7 @@ sub multi_submit_job {
 				&& scalar(@jobid_list) >= $params{'maxJobs'} )
 			{
 				&_job_list_poll( \@jobid_list );
-				print_debug_message( 'multi_submit_job',
-					'Remaining jobs: ' . scalar(@jobid_list), 1 );
+				print_debug_message( 'multi_submit_job', 'Remaining jobs: ' . scalar(@jobid_list), 1 );
 			}
 		}
 		close $INFILE;
@@ -1029,8 +1028,7 @@ sub multi_submit_job {
 	# Parallel mode, wait for remaining jobs to finish.
 	while ( $params{'maxJobs'} > 1 && scalar(@jobid_list) > 0 ) {
 		&_job_list_poll( \@jobid_list );
-		print_debug_message( 'multi_submit_job',
-			'Remaining jobs: ' . scalar(@jobid_list), 1 );
+		print_debug_message( 'multi_submit_job', 'Remaining jobs: ' . scalar(@jobid_list), 1 );
 	}
 	print_debug_message( 'multi_submit_job', 'End', 1 );
 }
@@ -1058,8 +1056,7 @@ sub _job_list_poll {
 		my ( $jobid, $seq_id, $error_count, $job_number ) =
 		  split( /\s+/, $jobid_list->[$jobNum] );
 		print_debug_message( '_job_list_poll', 'jobNum: ' . $jobNum, 12 );
-		print_debug_message( '_job_list_poll',
-			'Job info: ' . $jobid_list->[$jobNum], 12 );
+		print_debug_message( '_job_list_poll', 'Job info: ' . $jobid_list->[$jobNum], 12 );
 
 		# Get job status.
 		my $job_status = &rest_get_status($jobid);
@@ -1076,8 +1073,7 @@ sub _job_list_poll {
 		  )
 		{
 			if ( $job_status eq 'ERROR' || $job_status eq 'FAILED' ) {
-				print STDERR
-"Warning: job $jobid failed for sequence $job_number: $seq_id\n";
+				print STDERR "Warning: job $jobid failed for sequence $job_number: $seq_id\n";
 			}
 			&get_results( $jobid, $seq_id );
 			splice( @$jobid_list, $jobNum, 1 );
